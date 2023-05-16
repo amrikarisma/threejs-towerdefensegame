@@ -11,10 +11,19 @@ var controls;
 
 // var cube;
 
+var cursor_cube = undefined;
+
+
+//raycaster
+var raycaster;
+var mouse = new THREE.Vector2();
+var clickableObjs = new Array();
+
 function init() {
     clock = new THREE.Clock();
     scene = new THREE.Scene();
 
+    raycaster = new THREE.Raycaster();
 
     //renderer
     renderer = new THREE.WebGLRenderer({ antialias: true, alpha: true });
@@ -39,6 +48,16 @@ function init() {
     controls.maxDistance = 20;
     controls.maxPolarAngle = Math.PI / 2;
 
+    //cursor
+    const corsor_material = new THREE.MeshLambertMaterial({ transparent: true, opacity: 0, color: 0xc0392b });
+    const cursor_geometry = new THREE.BoxGeometry(0.5, 4, 0.5);
+    cursor_cube = new THREE.Mesh(cursor_geometry, corsor_material);
+    scene.add(cursor_cube);
+
+    //event
+    document.addEventListener('pointerdown', onMouseDown, false);
+    document.addEventListener('pointerup', onMouseUp, false);
+
     //light
     var ambientLight = new THREE.AmbientLight(0xcccccc, 0.2);
     scene.add(ambientLight);
@@ -54,7 +73,7 @@ function init() {
     // scene.add(cube);
 
     // ---------------- CALLING LOADING AND INIT FUNCTIONS ----------------
-    loadMap(map0_data, scene);
+    loadMap(map0_data, scene, clickableObjs);
 
     // ---------------- STARTING THE GAME MAIN LOOP ----------------
 
@@ -70,6 +89,32 @@ function render() {
     renderer.render(scene, camera);
 
     requestAnimationFrame(render);
+}
+
+function onMouseUp(event) {
+    cursor_cube.material.emissive.g = 0;
+    console.log(cursor_cube)
+
+}
+function onMouseDown(event) {
+    event.preventDefault();
+    mouse.x = (event.clientX / window.innerWidth) * 2 - 1;
+    mouse.y = - (event.clientY / window.innerHeight) * 2 + 1;
+
+    // Checking if the mouse projection is targeting a valid block in the clickableObjs array
+    raycaster.setFromCamera(mouse, camera);
+    var intersects = raycaster.intersectObjects(clickableObjs); // get the list of targetable objects currently intersecting with raycaster
+    if (intersects.length > 0) // If there is a match mouse/block (if the array is not empty)
+    {
+        var SelectedBloc = intersects[0].object; // we choose the first targetable element
+        cursor_cube.position.set(SelectedBloc.position.x, SelectedBloc.position.y, SelectedBloc.position.z);
+        cursor_cube.material.opacity = 0.5;
+        cursor_cube.material.emissive.g = 0.5;
+    } else // no valid block is targeted
+    {
+        cursor_cube.material.opacity = 0;
+    }
+    console.log(cursor_cube)
 }
 
 init();
