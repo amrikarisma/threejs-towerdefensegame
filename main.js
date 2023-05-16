@@ -1,5 +1,6 @@
 import * as THREE from 'three';
 import { MapControls } from 'three/examples/jsm/controls/MapControls';
+import { map0_data, loadMap } from './map.js';
 
 // variables
 var scene;
@@ -8,11 +9,12 @@ var renderer;
 var clock;
 var controls;
 
-var cube;
+// var cube;
 
 function init() {
     clock = new THREE.Clock();
     scene = new THREE.Scene();
+
 
     //renderer
     renderer = new THREE.WebGLRenderer({ antialias: true, alpha: true });
@@ -25,7 +27,7 @@ function init() {
     const frustumSize = 10;
 
     camera = new THREE.OrthographicCamera(frustumSize * aspect / -2, frustumSize * aspect / 2, frustumSize / 2, frustumSize / -2, 1, 1000);
-    camera.position.set(-5, 5, -5);
+    camera.position.set(-15, 15, -15);
     scene.add(camera);
 
     // controls
@@ -45,13 +47,18 @@ function init() {
     directionalLight.position.set(-1, 0.9, 0.4);
     scene.add(directionalLight);
 
-    //cube
-    const material = new THREE.MeshLambertMaterial();
-    const geometry = new THREE.BoxGeometry(2, 2, 2);
-    cube = new THREE.Mesh(geometry, material);
-    scene.add(cube);
+    // //cube
+    // const material = new THREE.MeshLambertMaterial();
+    // const geometry = new THREE.BoxGeometry(2, 2, 2);
+    // cube = new THREE.Mesh(geometry, material);
+    // scene.add(cube);
 
-    //loop
+    // ---------------- CALLING LOADING AND INIT FUNCTIONS ----------------
+    loadMap(map0_data, scene);
+
+    // ---------------- STARTING THE GAME MAIN LOOP ----------------
+
+    // loop
     render();
 }
 
