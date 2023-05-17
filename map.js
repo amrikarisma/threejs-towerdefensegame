@@ -23,10 +23,8 @@ export function loadMap(mapdata, scene, clickableObjs) {
     const material = new THREE.MeshLambertMaterial({});
     const geometry = new THREE.BoxGeometry(2, 2, 2);
     var basic_cube = new THREE.Mesh(geometry, material);
-    console.log(basic_cube)
     const road_material = new THREE.MeshLambertMaterial({ color: 0x2c3e50 });
     var road_cube = new THREE.Mesh(geometry, road_material);
-    console.log(road_cube)
 
     for (var x = 0; x < size_X; x++) {
         for (var y = 0; y < size_Y; y++) {

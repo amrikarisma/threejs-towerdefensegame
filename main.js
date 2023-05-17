@@ -1,6 +1,8 @@
 import * as THREE from 'three';
 import { MapControls } from 'three/examples/jsm/controls/MapControls';
 import { map0_data, loadMap } from './map.js';
+import { TowerManager } from './towermanager.js'
+import { createTowerGui_open, createTowerGui_close, infoTowerGui_open, infoTowerGui_close } from './gui.js';
 
 // variables
 var scene;
@@ -13,11 +15,15 @@ var controls;
 
 var cursor_cube = undefined;
 
+var tower_mesh = undefined;
+var cursorValid = false;
 
 //raycaster
 var raycaster;
 var mouse = new THREE.Vector2();
 var clickableObjs = new Array();
+
+var towerMngr = new TowerManager();
 
 function init() {
     clock = new THREE.Clock();
@@ -55,8 +61,44 @@ function init() {
     scene.add(cursor_cube);
 
     //event
-    document.addEventListener('pointerdown', onMouseDown, false);
-    document.addEventListener('pointerup', onMouseUp, false);
+    renderer.domElement.addEventListener('pointerdown', onMouseDown, false);
+    renderer.domElement.addEventListener('pointerup', onMouseUp, false);
+
+
+    // React Button
+    document.getElementById("buttonyes").addEventListener('click', function (event) {
+        event.stopPropagation();
+
+        var tmpTower = towerMngr.newTowerMeshToCreate;
+        console.log('tmpTower:', tmpTower)
+        scene.add(tmpTower);
+        towerMngr.addTower(tmpTower);
+
+        towerMngr.newTowerMeshToCreate = undefined;
+        createTowerGui_close();
+    })
+
+    document.getElementById("buttonno").addEventListener('click', function (event) {
+        event.stopPropagation();
+        towerMngr.newTowerMeshToCreate = undefined;
+        createTowerGui_close();
+    })
+
+    document.getElementById("buttondelete").addEventListener('click', function (event) {
+        event.stopPropagation();
+        towerMngr.deleteTower(towerMngr.selectedTower);
+        scene.remove(towerMngr.selectedTower.mesh);
+
+        infoTowerGui_close();
+        towerMngr.selectedTower = undefined;
+    })
+
+    document.getElementById("buttonclose").addEventListener('click', function (event) {
+        event.stopPropagation();
+        infoTowerGui_close();
+    })
+
+
 
     //light
     var ambientLight = new THREE.AmbientLight(0xcccccc, 0.2);
@@ -71,6 +113,11 @@ function init() {
     // const geometry = new THREE.BoxGeometry(2, 2, 2);
     // cube = new THREE.Mesh(geometry, material);
     // scene.add(cube);
+
+    // Tower Mesh
+    const material = new THREE.MeshLambertMaterial({ color: 0x0392b });
+    const tower_geometry = new THREE.BoxGeometry(1, 3, 1);
+    tower_mesh = new THREE.Mesh(tower_geometry, material);
 
     // ---------------- CALLING LOADING AND INIT FUNCTIONS ----------------
     loadMap(map0_data, scene, clickableObjs);
@@ -93,7 +140,27 @@ function render() {
 
 function onMouseUp(event) {
     cursor_cube.material.emissive.g = 0;
-    console.log(cursor_cube)
+    towerMngr.newTowerMeshToCreate = undefined;
+    towerMngr.selectedTower = undefined;
+
+
+
+    if (cursorValid) {
+        var checkTower = towerMngr.getTowerAtPosition(cursor_cube.position.x, cursor_cube.position.z);
+        if (checkTower == null) {
+            var newtower = tower_mesh.clone();
+            newtower.position.set(cursor_cube.position.x, 1, cursor_cube.position.z)
+            towerMngr.newTowerMeshToCreate = newtower;
+
+            infoTowerGui_close();
+            createTowerGui_open();
+        } else {
+            towerMngr.selectedTower = checkTower;
+            createTowerGui_close();
+            infoTowerGui_open(checkTower.mesh.position.x, checkTower.mesh.position.z)
+        }
+        console.log('checkTower:', checkTower)
+    }
 
 }
 function onMouseDown(event) {
@@ -110,11 +177,12 @@ function onMouseDown(event) {
         cursor_cube.position.set(SelectedBloc.position.x, SelectedBloc.position.y, SelectedBloc.position.z);
         cursor_cube.material.opacity = 0.5;
         cursor_cube.material.emissive.g = 0.5;
+        cursorValid = true;
     } else // no valid block is targeted
     {
         cursor_cube.material.opacity = 0;
+        cursorValid = false;
     }
-    console.log(cursor_cube)
 }
 
 init();
