@@ -1,5 +1,7 @@
 import * as THREE from 'three';
+import * as YUKA from 'yuka';
 import { MapControls } from 'three/examples/jsm/controls/MapControls';
+import { GLTFLoader } from 'three/examples/jsm/loaders/GLTFLoader';
 import { map0_data, loadMap } from './map.js';
 import { TowerManager } from './towermanager.js'
 import { createTowerGui_open, createTowerGui_close, infoTowerGui_open, infoTowerGui_close } from './gui.js';
@@ -8,8 +10,9 @@ import { createTowerGui_open, createTowerGui_close, infoTowerGui_open, infoTower
 var scene;
 var camera;
 var renderer;
-var clock;
 var controls;
+var entityManager;
+var time;
 
 // var cube;
 
@@ -25,8 +28,8 @@ var clickableObjs = new Array();
 
 var towerMngr = new TowerManager();
 
+
 function init() {
-    clock = new THREE.Clock();
     scene = new THREE.Scene();
 
     raycaster = new THREE.Raycaster();
@@ -44,6 +47,41 @@ function init() {
     camera = new THREE.OrthographicCamera(frustumSize * aspect / -2, frustumSize * aspect / 2, frustumSize / 2, frustumSize / -2, 1, 1000);
     camera.position.set(-15, 15, -15);
     scene.add(camera);
+
+    // loadObject
+    const loader = new GLTFLoader();
+    loader.load('./static/SUV.glb', function (glb) {
+        const model = glb.scene;
+        console.log('model:', model);
+        model.scale.set(0.5, 0.5, 0.5);
+        scene.add(model)
+    })
+
+    const vechicleGeometry = new THREE.ConeGeometry(0.1, 0.5, 8);
+    const vechicleMaterial = new THREE.MeshNormalMaterial();
+    const vechicleMesh = new THREE.Mesh(vechicleGeometry, vechicleMaterial);
+    vechicleMesh.matrixAutoUpdate = false;
+    scene.add(vechicleMesh);
+
+    const vehicle = new YUKA.Vehicle();
+    vehicle.setRenderComponent(vechicleMesh, sync);
+
+    function sync(entity, renderComponent) {
+        renderComponent.matrix.copy(entity.worldMatrix);
+    }
+
+    const path = new YUKA.Path();
+    path.add(new YUKA.Vector3(-4, 0, 4));
+
+    vehicle.position.copy(path.current());
+
+    const followPathBehavior = new YUKA.FollowPathBehavior(path, 0.5);
+    vehicle.steering.add(followPathBehavior);
+
+    entityManager = new YUKA.EntityManager();
+    entityManager.add(vehicle);
+
+    time = new YUKA.Time();
 
     // controls
     controls = new MapControls(camera, renderer.domElement);
@@ -129,8 +167,9 @@ function init() {
 }
 
 function render() {
-    var delta = clock.getDelta();
-    var elapsed = clock.elapsedTime;
+    const delta = time.update().getDelta();
+    console.log(entityManager)
+    entityManager.update(delta)
 
     controls.update();
     renderer.render(scene, camera);
