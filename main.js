@@ -48,19 +48,12 @@ function init() {
     camera.position.set(-15, 15, -15);
     scene.add(camera);
 
-    // loadObject
-    const loader = new GLTFLoader();
-    loader.load('./static/SUV.glb', function (glb) {
-        const model = glb.scene;
-        console.log('model:', model);
-        model.scale.set(0.5, 0.5, 0.5);
-        scene.add(model)
-    })
-
     const vechicleGeometry = new THREE.ConeGeometry(0.1, 0.5, 8);
+    vechicleGeometry.rotateX(Math.PI * 0.5);
     const vechicleMaterial = new THREE.MeshNormalMaterial();
     const vechicleMesh = new THREE.Mesh(vechicleGeometry, vechicleMaterial);
     vechicleMesh.matrixAutoUpdate = false;
+    vechicleMesh.position.set(2.5, 0.9, 4);
     scene.add(vechicleMesh);
 
     const vehicle = new YUKA.Vehicle();
@@ -69,19 +62,6 @@ function init() {
     function sync(entity, renderComponent) {
         renderComponent.matrix.copy(entity.worldMatrix);
     }
-
-    const path = new YUKA.Path();
-    path.add(new YUKA.Vector3(-4, 0, 4));
-
-    vehicle.position.copy(path.current());
-
-    const followPathBehavior = new YUKA.FollowPathBehavior(path, 0.5);
-    vehicle.steering.add(followPathBehavior);
-
-    entityManager = new YUKA.EntityManager();
-    entityManager.add(vehicle);
-
-    time = new YUKA.Time();
 
     // controls
     controls = new MapControls(camera, renderer.domElement);
@@ -108,7 +88,6 @@ function init() {
         event.stopPropagation();
 
         var tmpTower = towerMngr.newTowerMeshToCreate;
-        console.log('tmpTower:', tmpTower)
         scene.add(tmpTower);
         towerMngr.addTower(tmpTower);
 
@@ -158,8 +137,41 @@ function init() {
     tower_mesh = new THREE.Mesh(tower_geometry, material);
 
     // ---------------- CALLING LOADING AND INIT FUNCTIONS ----------------
-    loadMap(map0_data, scene, clickableObjs);
+    const path = loadMap(map0_data, scene, clickableObjs);
+    vehicle.position.copy(path.current());
 
+    const followPathBehavior = new YUKA.FollowPathBehavior(path, 0.5);
+    vehicle.steering.add(followPathBehavior);
+
+    entityManager = new YUKA.EntityManager();
+    entityManager.add(vehicle);
+
+    // loadObject
+    const loader = new GLTFLoader();
+    loader.load('./static/SUV.glb', function (glb) {
+        const model = glb.scene;
+        // model.scale.set(0.5, 0.5, 0.5);
+        // model.position.set(4, 0.9, 4);
+        scene.add(model)
+        model.matrixAutoUpdate = false;
+        vehicle.scale = new YUKA.Vector3(0.5, 0.5, 0.5);
+        vehicle.setRenderComponent(model, sync);
+    })
+
+    const position = [];
+    for (let i = 0; i < path._waypoints.length; i++) {
+        const waypoint = path._waypoints[i];
+        position.push(waypoint.x, waypoint.y, waypoint.z);
+    }
+
+    const lineGeometry = new THREE.BufferGeometry();
+    lineGeometry.setAttribute('position', new THREE.Float32BufferAttribute(position, 3));
+
+    const lineMaterial = new THREE.LineBasicMaterial({ color: 0xFFFFFF });
+    const lines = new THREE.LineLoop(lineGeometry, lineMaterial);
+    scene.add(lines);
+
+    time = new YUKA.Time();
     // ---------------- STARTING THE GAME MAIN LOOP ----------------
 
     // loop
@@ -168,7 +180,6 @@ function init() {
 
 function render() {
     const delta = time.update().getDelta();
-    console.log(entityManager)
     entityManager.update(delta)
 
     controls.update();
@@ -198,7 +209,6 @@ function onMouseUp(event) {
             createTowerGui_close();
             infoTowerGui_open(checkTower.mesh.position.x, checkTower.mesh.position.z)
         }
-        console.log('checkTower:', checkTower)
     }
 
 }
