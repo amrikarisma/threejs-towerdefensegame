@@ -1,5 +1,7 @@
 import * as THREE from 'three';
+import * as YUKA from 'yuka';
 import { MapControls } from 'three/examples/jsm/controls/MapControls';
+import { GLTFLoader } from 'three/examples/jsm/loaders/GLTFLoader';
 import { map0_data, loadMap } from './map.js';
 import { TowerManager } from './towermanager.js'
 import { createTowerGui_open, createTowerGui_close, infoTowerGui_open, infoTowerGui_close } from './gui.js';
@@ -8,8 +10,9 @@ import { createTowerGui_open, createTowerGui_close, infoTowerGui_open, infoTower
 var scene;
 var camera;
 var renderer;
-var clock;
 var controls;
+var entityManager;
+var time;
 
 // var cube;
 
@@ -25,8 +28,8 @@ var clickableObjs = new Array();
 
 var towerMngr = new TowerManager();
 
+
 function init() {
-    clock = new THREE.Clock();
     scene = new THREE.Scene();
 
     raycaster = new THREE.Raycaster();
@@ -44,6 +47,21 @@ function init() {
     camera = new THREE.OrthographicCamera(frustumSize * aspect / -2, frustumSize * aspect / 2, frustumSize / 2, frustumSize / -2, 1, 1000);
     camera.position.set(-15, 15, -15);
     scene.add(camera);
+
+    const vechicleGeometry = new THREE.ConeGeometry(0.1, 0.5, 8);
+    vechicleGeometry.rotateX(Math.PI * 0.5);
+    const vechicleMaterial = new THREE.MeshNormalMaterial();
+    const vechicleMesh = new THREE.Mesh(vechicleGeometry, vechicleMaterial);
+    vechicleMesh.matrixAutoUpdate = false;
+    vechicleMesh.position.set(2.5, 0.9, 4);
+    scene.add(vechicleMesh);
+
+    const vehicle = new YUKA.Vehicle();
+    vehicle.setRenderComponent(vechicleMesh, sync);
+
+    function sync(entity, renderComponent) {
+        renderComponent.matrix.copy(entity.worldMatrix);
+    }
 
     // controls
     controls = new MapControls(camera, renderer.domElement);
@@ -70,7 +88,6 @@ function init() {
         event.stopPropagation();
 
         var tmpTower = towerMngr.newTowerMeshToCreate;
-        console.log('tmpTower:', tmpTower)
         scene.add(tmpTower);
         towerMngr.addTower(tmpTower);
 
@@ -120,8 +137,41 @@ function init() {
     tower_mesh = new THREE.Mesh(tower_geometry, material);
 
     // ---------------- CALLING LOADING AND INIT FUNCTIONS ----------------
-    loadMap(map0_data, scene, clickableObjs);
+    const path = loadMap(map0_data, scene, clickableObjs);
+    vehicle.position.copy(path.current());
 
+    const followPathBehavior = new YUKA.FollowPathBehavior(path, 0.5);
+    vehicle.steering.add(followPathBehavior);
+
+    entityManager = new YUKA.EntityManager();
+    entityManager.add(vehicle);
+
+    // loadObject
+    const loader = new GLTFLoader();
+    loader.load('./static/SUV.glb', function (glb) {
+        const model = glb.scene;
+        // model.scale.set(0.5, 0.5, 0.5);
+        // model.position.set(4, 0.9, 4);
+        scene.add(model)
+        model.matrixAutoUpdate = false;
+        vehicle.scale = new YUKA.Vector3(0.5, 0.5, 0.5);
+        vehicle.setRenderComponent(model, sync);
+    })
+
+    const position = [];
+    for (let i = 0; i < path._waypoints.length; i++) {
+        const waypoint = path._waypoints[i];
+        position.push(waypoint.x, waypoint.y, waypoint.z);
+    }
+
+    const lineGeometry = new THREE.BufferGeometry();
+    lineGeometry.setAttribute('position', new THREE.Float32BufferAttribute(position, 3));
+
+    const lineMaterial = new THREE.LineBasicMaterial({ color: 0xFFFFFF });
+    const lines = new THREE.LineLoop(lineGeometry, lineMaterial);
+    scene.add(lines);
+
+    time = new YUKA.Time();
     // ---------------- STARTING THE GAME MAIN LOOP ----------------
 
     // loop
@@ -129,8 +179,8 @@ function init() {
 }
 
 function render() {
-    var delta = clock.getDelta();
-    var elapsed = clock.elapsedTime;
+    const delta = time.update().getDelta();
+    entityManager.update(delta)
 
     controls.update();
     renderer.render(scene, camera);
@@ -159,7 +209,6 @@ function onMouseUp(event) {
             createTowerGui_close();
             infoTowerGui_open(checkTower.mesh.position.x, checkTower.mesh.position.z)
         }
-        console.log('checkTower:', checkTower)
     }
 
 }
