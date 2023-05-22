@@ -5,6 +5,7 @@ import { GLTFLoader } from 'three/examples/jsm/loaders/GLTFLoader';
 import { map0_data, loadMap } from './map.js';
 import { TowerManager } from './towermanager.js'
 import { createTowerGui_open, createTowerGui_close, infoTowerGui_open, infoTowerGui_close } from './gui.js';
+import ModelSUV from './static/SUV.glb';
 
 // variables
 var scene;
@@ -148,10 +149,8 @@ function init() {
 
     // loadObject
     const loader = new GLTFLoader();
-    loader.load('./static/SUV.glb', function (glb) {
+    loader.load(ModelSUV, function (glb) {
         const model = glb.scene;
-        // model.scale.set(0.5, 0.5, 0.5);
-        // model.position.set(4, 0.9, 4);
         scene.add(model)
         model.matrixAutoUpdate = false;
         vehicle.scale = new YUKA.Vector3(0.5, 0.5, 0.5);
@@ -163,13 +162,12 @@ function init() {
         const waypoint = path._waypoints[i];
         position.push(waypoint.x, waypoint.y, waypoint.z);
     }
-
     const lineGeometry = new THREE.BufferGeometry();
     lineGeometry.setAttribute('position', new THREE.Float32BufferAttribute(position, 3));
 
-    const lineMaterial = new THREE.LineBasicMaterial({ color: 0xFFFFFF });
+    const lineMaterial = new THREE.LineBasicMaterial({ color: 0x000000 });
     const lines = new THREE.LineLoop(lineGeometry, lineMaterial);
-    scene.add(lines);
+    // scene.add(lines);
 
     time = new YUKA.Time();
     // ---------------- STARTING THE GAME MAIN LOOP ----------------
