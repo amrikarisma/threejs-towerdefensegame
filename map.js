@@ -7,17 +7,17 @@ import { MapControls } from 'three/examples/jsm/controls/MapControls';
 export var map0_data = {
     "data": [
         [0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0],
-        [0, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 0],
-        [0, 1, 0, 0, 0, 0, 0, 0, 0, 0, 0, 1, 0],
-        [0, 1, 0, 0, 0, 0, 1, 1, 1, 1, 0, 1, 0],
-        [0, 1, 1, 1, 1, 1, 1, 0, 0, 1, 0, 1, 0],
-        [0, 0, 0, 0, 0, 0, 0, 0, 1, 1, 0, 1, 0],
-        [0, 0, 1, 1, 1, 1, 1, 1, 1, 0, 0, 1, 0],
-        [0, 0, 1, 0, 0, 0, 0, 0, 0, 0, 0, 1, 0],
-        [0, 0, 1, 1, 1, 1, 1, 1, 1, 0, 1, 1, 0],
-        [0, 0, 0, 0, 0, 0, 0, 0, 1, 0, 1, 0, 0],
-        [0, 0, 0, 0, 0, 0, 0, 0, 1, 1, 1, 0, 0],
+        [0, 2, 1, 1, 1, 1, 1, 2, 0, 0, 0, 0, 0],
+        [0, 1, 0, 0, 0, 0, 0, 2, 1, 1, 1, 2, 0],
+        [0, 2, 2, 0, 0, 0, 0, 0, 0, 0, 0, 1, 0],
+        [0, 0, 2, 0, 0, 0, 0, 0, 0, 0, 0, 1, 0],
+        [0, 0, 1, 0, 0, 0, 0, 2, 1, 2, 0, 1, 0],
+        [0, 0, 1, 0, 0, 0, 0, 1, 0, 1, 0, 1, 0],
+        [0, 0, 2, 1, 1, 1, 1, 2, 0, 1, 0, 1, 0],
+        [0, 0, 0, 0, 0, 0, 0, 0, 0, 1, 0, 1, 0],
+        [0, 0, 0, 0, 0, 0, 0, 0, 0, 2, 1, 2, 0],
         [0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0],
+
     ]
 };
 
@@ -31,14 +31,42 @@ export function loadMap(mapdata, scene, clickableObjs) {
     var road_cube = new THREE.Mesh(geometry, road_material);
 
     const path = new YUKA.Path();
-    const route = [-4, 0, 4, -6, 0, 0, -4, 0, -4, 0, 0, 0, 4, 0, -4, 6, 0, 0, 4, 0, 4, 0, 0, 6]
+    // const route = [[-12, 0, 10], [-12, 0, -12], [-8, 0, -12], [-8, 0, 0], [-3, 0, 0], [-3, 0, -12], [8, 0, -12], [10, 0, 10]]
+    let route = [
+        [-11, 0, -9],
+        [-11, 0, -5],
+        [-9, 0, -5],
+        [-9, 0, 3],
+        [1, 0, 3],
+        [1, 0, -1],
+        [5, 0, -1],
+        [5, 0, 7],
+        [9, 0, 7],
+        [9, 0, -7],
+        [1, 0, -7],
+        [1, 0, -9]
+        // [-9, 0, -5],
+        // [1, 0, -9]
+    ];
 
-    for (var x = 0; x < size_X; x++) {
-        for (var y = 0; y < size_Y; y++) {
+    // console.log(route)
+    // for (let x = 0; x < route.length; x++) {
+    //     var rdbloc = road_cube.clone();
+    //     rdbloc.scale.y = 0.8;
+    //     rdbloc.position.set(route[x][0], -1.2, route[x][2]);
+    //     scene.add(rdbloc);
+    //     path.add(new YUKA.Vector3(route[x][0], 0, route[x][2]));
+    // }
+
+
+    for (var y = 0; y < size_Y; y++) {
+        for (var x = 0; x < size_X; x++) {
             var posx = (x * 2) - (size_X / 2) * 2; // position x
             var posy = (y * 2) - (size_Y / 2) * 2; // position y ( ATTENTION, this is the Z axis in three.js universe)
+
             switch (mapdata.data[y][x]) {
                 case 0: // If [x/y] value is 0 - We are creating a basic block
+
                     var tmpbloc = basic_cube.clone();
                     tmpbloc.position.set(posx, -1, posy);
                     scene.add(tmpbloc);
@@ -49,22 +77,24 @@ export function loadMap(mapdata, scene, clickableObjs) {
                     tmpbloc.scale.y = 0.8;
                     tmpbloc.position.set(posx, -1.2, posy);
                     scene.add(tmpbloc);
-                    path.add(new YUKA.Vector3(posx, 0, posy));
-
+                    break;
+                case 2:
+                    var tmpbloc = road_cube.clone();
+                    tmpbloc.scale.y = 0.8;
+                    tmpbloc.position.set(posx, -1.2, posy);
+                    scene.add(tmpbloc);
+                    console.log([posx, 0, posy])
                     break;
             }
         }
     }
 
-    // for (let x = 0; x < route.length; x++) {
-    //     var tmpbloc = road_cube.clone();
-    //     tmpbloc.scale.y = 0.8;
-    //     tmpbloc.position.set(route[x][0], -1.2, route[x][2]);
-    //     scene.add(tmpbloc);
-    //     path.add(new YUKA.Vector3(route[x][0], 0, route[x][2]));
+    for (let i = 0; i < route.length; i++) {
+        // route[i];
+        path.add(new YUKA.Vector3(route[i][0], 0, route[i][2]));
+    }
 
-    // }
-
+    console.log(route)
     path.loop = true;
 
     return path;
