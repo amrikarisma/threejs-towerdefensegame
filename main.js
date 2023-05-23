@@ -3,9 +3,11 @@ import * as YUKA from 'yuka';
 import { MapControls } from 'three/examples/jsm/controls/MapControls';
 import { GLTFLoader } from 'three/examples/jsm/loaders/GLTFLoader';
 import { map0_data, loadMap } from './map.js';
-import { TowerManager } from './towermanager.js'
+import { TowerManager } from './towermanager.js';
+import { loadCannon } from './cannon.js';
 import { createTowerGui_open, createTowerGui_close, infoTowerGui_open, infoTowerGui_close } from './gui.js';
 import ModelSUV from './static/SUV.glb';
+import ModelTower from './static/tower.glb';
 
 // variables
 var scene;
@@ -14,12 +16,15 @@ var renderer;
 var controls;
 var entityManager;
 var time;
+var cannon;
+var heart = 5;
 
 // var cube;
-
+var path;
 var cursor_cube = undefined;
 
 var tower_mesh = undefined;
+var bom_mesh = undefined;
 var cursorValid = false;
 
 //raycaster
@@ -29,11 +34,23 @@ var clickableObjs = new Array();
 
 var towerMngr = new TowerManager();
 
+var vehicle = new YUKA.Vehicle();
+var bom = new YUKA.Vehicle();
+
+let bomItems = [];
+let vehicleItems = [];
+
+var bomMesh = undefined;
+var vehicleMesh = undefined;
+
+const loader = new GLTFLoader();
 
 function init() {
     scene = new THREE.Scene();
 
     raycaster = new THREE.Raycaster();
+
+    entityManager = new YUKA.EntityManager();
 
     //renderer
     renderer = new THREE.WebGLRenderer({ antialias: true, alpha: true });
@@ -49,20 +66,6 @@ function init() {
     camera.position.set(-15, 15, -15);
     scene.add(camera);
 
-    const vechicleGeometry = new THREE.ConeGeometry(0.1, 0.5, 8);
-    vechicleGeometry.rotateX(Math.PI * 0.5);
-    const vechicleMaterial = new THREE.MeshNormalMaterial();
-    const vechicleMesh = new THREE.Mesh(vechicleGeometry, vechicleMaterial);
-    vechicleMesh.matrixAutoUpdate = false;
-    vechicleMesh.position.set(2.5, 0.9, 4);
-    scene.add(vechicleMesh);
-
-    const vehicle = new YUKA.Vehicle();
-    vehicle.setRenderComponent(vechicleMesh, sync);
-
-    function sync(entity, renderComponent) {
-        renderComponent.matrix.copy(entity.worldMatrix);
-    }
 
     // controls
     controls = new MapControls(camera, renderer.domElement);
@@ -75,7 +78,7 @@ function init() {
 
     //cursor
     const corsor_material = new THREE.MeshLambertMaterial({ transparent: true, opacity: 0, color: 0xc0392b });
-    const cursor_geometry = new THREE.BoxGeometry(0.5, 4, 0.5);
+    const cursor_geometry = new THREE.BoxGeometry(0.5, 3, 0.5);
     cursor_cube = new THREE.Mesh(cursor_geometry, corsor_material);
     scene.add(cursor_cube);
 
@@ -91,6 +94,24 @@ function init() {
         var tmpTower = towerMngr.newTowerMeshToCreate;
         scene.add(tmpTower);
         towerMngr.addTower(tmpTower);
+
+        var refreshIntervalId = setInterval(() => {
+            addBom(tmpTower.position);
+        }, 500);
+
+        setTimeout(() => {
+            clearInterval(refreshIntervalId);
+        }, 3000);
+
+
+        // loader.load(ModelTower, function (glb) {
+        //     const model = glb.scene;
+        //     scene.add(model)
+        //     model.matrixAutoUpdate = false;
+        //     model.position.setX(tmpTower.position.x);
+        //     model.position.setY(tmpTower.position.y);
+        //     console.log(model)
+        // })
 
         towerMngr.newTowerMeshToCreate = undefined;
         createTowerGui_close();
@@ -126,50 +147,27 @@ function init() {
     directionalLight.position.set(-1, 0.9, 0.4);
     scene.add(directionalLight);
 
-    // //cube
-    // const material = new THREE.MeshLambertMaterial();
-    // const geometry = new THREE.BoxGeometry(2, 2, 2);
-    // cube = new THREE.Mesh(geometry, material);
-    // scene.add(cube);
-
     // Tower Mesh
-    const material = new THREE.MeshLambertMaterial({ color: 0x0392b });
+    const material = new THREE.MeshLambertMaterial({ color: 0x333333 });
     const tower_geometry = new THREE.BoxGeometry(1, 3, 1);
     tower_mesh = new THREE.Mesh(tower_geometry, material);
 
+    // BOM Mesh
+    const bomMaterial = new THREE.MeshLambertMaterial({ color: 0xFFFFFF });
+    const bom_geometry = new THREE.SphereGeometry(0.2, 32, 16);
+    bom_mesh = new THREE.Mesh(bom_geometry, bomMaterial);
+
     // ---------------- CALLING LOADING AND INIT FUNCTIONS ----------------
-    const path = loadMap(map0_data, scene, clickableObjs);
-    vehicle.position.copy(path.current());
-
-    const followPathBehavior = new YUKA.FollowPathBehavior(path, 0.5);
-    vehicle.steering.add(followPathBehavior);
-
-    entityManager = new YUKA.EntityManager();
-    entityManager.add(vehicle);
-
-    // loadObject
-    const loader = new GLTFLoader();
-    loader.load(ModelSUV, function (glb) {
-        const model = glb.scene;
-        scene.add(model)
-        model.matrixAutoUpdate = false;
-        vehicle.scale = new YUKA.Vector3(0.5, 0.5, 0.5);
-        vehicle.setRenderComponent(model, sync);
-    })
-
-    const position = [];
-    for (let i = 0; i < path._waypoints.length; i++) {
-        const waypoint = path._waypoints[i];
-        position.push(waypoint.x, waypoint.y, waypoint.z);
-    }
-    const lineGeometry = new THREE.BufferGeometry();
-    lineGeometry.setAttribute('position', new THREE.Float32BufferAttribute(position, 3));
-
-    const lineMaterial = new THREE.LineBasicMaterial({ color: 0x000000 });
-    const lines = new THREE.LineLoop(lineGeometry, lineMaterial);
-    // scene.add(lines);
+    path = loadMap(map0_data, scene, clickableObjs);
 
     time = new YUKA.Time();
+
+
+    addVehicle();
+
+
+    // cannon = loadCannon(scene, intersectionPoint);
+
     // ---------------- STARTING THE GAME MAIN LOOP ----------------
 
     // loop
@@ -179,6 +177,22 @@ function init() {
 function render() {
     const delta = time.update().getDelta();
     entityManager.update(delta)
+    for (let i = 0; i < bomItems.length; i++) {
+        if (vehicle.position.distanceTo(bomItems[i].bom.position) < 1) {
+            console.log('BOOM!!')
+            console.log(bomItems[i].bom.position)
+            removeBom(bomItems[i].bom, bomItems[i].bomMesh);
+            const index = bomItems.indexOf(bomItems[i]);
+            bomItems.splice(index, 1);
+            heart--;
+            if (heart < 1) {
+                removeVehicle(vehicle, vehicleMesh);
+                heart = 5;
+                addVehicle();
+            }
+        }
+    }
+
 
     controls.update();
     renderer.render(scene, camera);
@@ -190,8 +204,6 @@ function onMouseUp(event) {
     cursor_cube.material.emissive.g = 0;
     towerMngr.newTowerMeshToCreate = undefined;
     towerMngr.selectedTower = undefined;
-
-
 
     if (cursorValid) {
         var checkTower = towerMngr.getTowerAtPosition(cursor_cube.position.x, cursor_cube.position.z);
@@ -230,6 +242,72 @@ function onMouseDown(event) {
         cursor_cube.material.opacity = 0;
         cursorValid = false;
     }
+}
+function addBom(position) {
+    const bomGeometry = new THREE.SphereGeometry(0.1, 32, 16);
+    bomGeometry.rotateX(Math.PI * 0.5);
+    const bomMaterial = new THREE.MeshNormalMaterial();
+    bomMesh = new THREE.Mesh(bomGeometry, bomMaterial);
+    bomMesh.matrixAutoUpdate = false;
+    // Add cone
+    scene.add(bomMesh);
+    bom = new YUKA.Vehicle();
+    bom.setRenderComponent(bomMesh, sync);
+
+    const seekBehavior = new YUKA.SeekBehavior(vehicle.position);
+    bom.steering.add(seekBehavior);
+    bom.maxSpeed = 10;
+    bom.position.set(position.x, 2, position.z)
+
+    entityManager.add(bom);
+
+    bomItems.push({ bom, bomMesh });
+}
+
+function removeBom(bom, bomMesh) {
+    scene.remove(bomMesh);
+    entityManager.remove(bom);
+    console.log('Bom removed!')
+}
+
+function addVehicle() {
+    const vechicleGeometry = new THREE.ConeGeometry(0.1, 0.5, 8);
+    vechicleGeometry.rotateX(Math.PI * 0.5);
+    const vechicleMaterial = new THREE.MeshNormalMaterial();
+    vehicleMesh = new THREE.Mesh(vechicleGeometry, vechicleMaterial);
+    vehicleMesh.matrixAutoUpdate = false;
+
+    vehicle = new YUKA.Vehicle();
+    vehicle.setRenderComponent(vehicleMesh, sync);
+    console.log(path)
+
+    vehicle.position.copy(path.current());
+
+    const followPathBehavior = new YUKA.FollowPathBehavior(path, 0.5);
+    vehicle.steering.add(followPathBehavior);
+
+    entityManager.add(vehicle);
+
+    // loadObject
+    loader.load(ModelSUV, function (glb) {
+        const model = glb.scene;
+        scene.add(model)
+        model.matrixAutoUpdate = false;
+        vehicle.scale = new YUKA.Vector3(0.5, 0.5, 0.5);
+        vehicle.setRenderComponent(model, sync);
+    })
+
+}
+
+
+function removeVehicle(vehicle, vehicleMesh) {
+    scene.remove(vehicleMesh);
+    entityManager.remove(vehicle);
+    console.log('Vehicle removed!')
+}
+
+function sync(entity, renderComponent) {
+    renderComponent.matrix.copy(entity.worldMatrix);
 }
 
 init();

@@ -31,7 +31,6 @@ export function loadMap(mapdata, scene, clickableObjs) {
     var road_cube = new THREE.Mesh(geometry, road_material);
 
     const path = new YUKA.Path();
-    // const route = [[-12, 0, 10], [-12, 0, -12], [-8, 0, -12], [-8, 0, 0], [-3, 0, 0], [-3, 0, -12], [8, 0, -12], [10, 0, 10]]
     let route = [
         [-11, 0, -9],
         [-11, 0, -5],
@@ -45,19 +44,7 @@ export function loadMap(mapdata, scene, clickableObjs) {
         [9, 0, -7],
         [1, 0, -7],
         [1, 0, -9]
-        // [-9, 0, -5],
-        // [1, 0, -9]
     ];
-
-    // console.log(route)
-    // for (let x = 0; x < route.length; x++) {
-    //     var rdbloc = road_cube.clone();
-    //     rdbloc.scale.y = 0.8;
-    //     rdbloc.position.set(route[x][0], -1.2, route[x][2]);
-    //     scene.add(rdbloc);
-    //     path.add(new YUKA.Vector3(route[x][0], 0, route[x][2]));
-    // }
-
 
     for (var y = 0; y < size_Y; y++) {
         for (var x = 0; x < size_X; x++) {
@@ -83,7 +70,6 @@ export function loadMap(mapdata, scene, clickableObjs) {
                     tmpbloc.scale.y = 0.8;
                     tmpbloc.position.set(posx, -1.2, posy);
                     scene.add(tmpbloc);
-                    console.log([posx, 0, posy])
                     break;
             }
         }
@@ -94,7 +80,6 @@ export function loadMap(mapdata, scene, clickableObjs) {
         path.add(new YUKA.Vector3(route[i][0], 0, route[i][2]));
     }
 
-    console.log(route)
     path.loop = true;
 
     return path;
